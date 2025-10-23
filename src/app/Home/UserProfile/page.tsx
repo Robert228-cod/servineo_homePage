@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { mockUser } from "@/app/UI/mockUser";
 
-export default function ProfilePage(props: { params?: Record<string, any> } | undefined) {
+export default function ProfilePage(_props?: { params?: Record<string, string | string[]> }) {
   // Si no usas props, puedes ignorarlos. Se aceptan para evitar errores de tipo en build.
   return (
     <div className="min-h-[calc(100vh-80px)] bg-[var(--light-gray)] py-10 px-4">
