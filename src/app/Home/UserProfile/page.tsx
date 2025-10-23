@@ -3,7 +3,14 @@
 import Image from "next/image";
 import { mockUser } from "@/app/UI/mockUser";
 
-export default function ProfilePage() {
+type PageProps = {
+  params: {
+    slug: string;
+  };
+};
+
+export default async function ProfilePage({ params }: PageProps) {
+  const { slug } = params;
   return (
     <div className="min-h-[calc(100vh-80px)] bg-[var(--light-gray)] py-10 px-4">
       <div className="max-w-2xl mx-auto">
