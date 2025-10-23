@@ -10,22 +10,10 @@ import '@/app/Home/UserProfile/userProfile.css';
 import { mockUser } from '@/app/Home/UserProfile/UI/mockUser';
 
 declare global {
-  // define a lightweight user/session shape to avoid any
-  interface BookaUser {
-    loggedIn?: boolean;
-    name?: string;
-    photo?: string;
-    email?: string;
-    phone?: string;
-    // allow other fields but typed as unknown
-    [key: string]: unknown;
-  }
-
   interface Window {
-    deviceId?: string;
     login?: () => void;
     logout?: () => void;
-    toggleMenu?: (e?: Event | MouseEvent) => void;
+    toggleMenu?: (e?: any) => void;
     closeMenu?: () => void;
     goToProfile?: () => void;
     openEdit?: () => void;
@@ -33,12 +21,11 @@ declare global {
     closeProfileModal?: () => void;
     saveProfile?: () => void;
     savePasswordChange?: () => void;
-    togglePasswordVisibility?: (inputId: string, btn?: HTMLElement | null) => void;
+    togglePasswordVisibility?: (inputId: string, btn?: any) => void;
     cancelPasswordChange?: () => void;
     togglePasswordChange?: () => void;
     isAuthenticated?: boolean;
-    userProfile?: BookaUser | null;
-    _bookaBroadcast?: BroadcastChannel;
+    userProfile?: any;
   }
 }
 
@@ -79,9 +66,8 @@ const Header = () => {
   useEffect(() => {
     const checkAuth = () => {
       const usersStore = JSON.parse(localStorage.getItem('booka_users') || '{}');
-      // use typed window.deviceId
-      const deviceId = window.deviceId || 'dev-default';
-      const session = (usersStore as any).sessions?.[deviceId]; // runtime parse, keep local any use here only for runtime
+      const deviceId = (window as any).deviceId || 'dev-default';
+      const session = usersStore.sessions?.[deviceId];
       setIsAuthenticated(!!session?.loggedIn);
     };
 
@@ -103,21 +89,21 @@ const Header = () => {
       const usersStore = JSON.parse(localStorage.getItem('booka_users') || '{}');
       const deviceId = localStorage.getItem('booka_device_id');
 
-      const userSession = deviceId ? (usersStore as any)?.sessions?.[deviceId] : null;
+      const userSession = deviceId ? usersStore?.sessions?.[deviceId] : null;
+
       if (userSession && userSession.loggedIn) {
         setUser(userSession);
         setIsAuthenticated(true);
-        window.userProfile = userSession as BookaUser;
+        window.userProfile = userSession;
         window.isAuthenticated = true;
       }
     } catch (err) {
       console.warn('No se pudo restaurar sesión:', err);
     }
 
-    // use window directly (typed via global)
-    // define login/logout on window
-    const originalLogin = window.login;
-    window.login = () => {
+    const win = window as any;
+
+    win.login = () => {
       const usersStore = JSON.parse(localStorage.getItem('booka_users') || '{}');
       const deviceId = localStorage.getItem('booka_device_id');
 
@@ -125,8 +111,8 @@ const Header = () => {
         console.warn('No se encontró deviceId en localStorage.');
         return;
       }
-      if (!(usersStore as any).sessions) (usersStore as any).sessions = {};
-      const existingSession = (usersStore as any).sessions[deviceId] || {};
+      if (!usersStore.sessions) usersStore.sessions = {};
+      const existingSession = usersStore.sessions[deviceId] || {};
 
       const updatedSession = {
         ...existingSession,
@@ -136,23 +122,19 @@ const Header = () => {
         Object.assign(updatedSession, mockUser);
       }
 
-      (usersStore as any).sessions[deviceId] = updatedSession;
-      (usersStore as any).lastUpdated = Date.now();
+      usersStore.sessions[deviceId] = updatedSession;
+      usersStore.lastUpdated = Date.now();
       localStorage.setItem('booka_users', JSON.stringify(usersStore));
 
-      window.userProfile = updatedSession as BookaUser;
-      window.isAuthenticated = true;
-      setUser(updatedSession as BookaUser);
+      win.userProfile = updatedSession;
+      win.isAuthenticated = true;
+      setUser(updatedSession);
       setIsAuthenticated(true);
 
       window.dispatchEvent(new CustomEvent('booka-auth-updated', { detail: updatedSession }));
-      
-      // call original if existed
-      originalLogin?.();
     };
 
-    const originalLogout = window.logout;
-    window.logout = () => {
+    win.logout = () => {
       const usersStore = JSON.parse(localStorage.getItem('booka_users') || '{}');
       const deviceId = localStorage.getItem('booka_device_id');
 
@@ -161,66 +143,60 @@ const Header = () => {
         return;
       }
 
-      if ((usersStore as any).sessions && (usersStore as any).sessions[deviceId]) {
-        (usersStore as any).sessions[deviceId].loggedIn = false;
-        (usersStore as any).lastUpdated = Date.now();
+      if (usersStore.sessions && usersStore.sessions[deviceId]) {
+        usersStore.sessions[deviceId].loggedIn = false;
+        usersStore.lastUpdated = Date.now();
         localStorage.setItem('booka_users', JSON.stringify(usersStore));
       }
 
-      window.userProfile = null;
-      window.isAuthenticated = false;
+      win.userProfile = null;
+      win.isAuthenticated = false;
       setIsAuthenticated(false);
 
-      const savedSession = (usersStore as any).sessions?.[deviceId] || mockUser;
+      const savedSession = usersStore.sessions?.[deviceId] || mockUser;
       setUser(savedSession);
       
       // Redirigir a la página de inicio
       router.push('/');
-
-      // call original if existed
-      originalLogout?.();
     };
-
-    window.closeMenu = () => setIsMenuOpen(false);
+    win.closeMenu = () => setIsMenuOpen(false);
 
     // Sincronización global entre rutas y pestañas
-    if (!window._bookaBroadcast) {
-      window._bookaBroadcast = new BroadcastChannel('booka_auth_channel');
+    let broadcast: BroadcastChannel;
+    if (!(window as any)._bookaBroadcast) {
+      (window as any)._bookaBroadcast = new BroadcastChannel('booka_auth_channel');
     }
-    const broadcast = window._bookaBroadcast;
+    broadcast = (window as any)._bookaBroadcast;
 
-    const syncAuthState = (data: unknown) => {
-      if (typeof data === 'object' && data !== null && 'type' in data) {
-        const payload = data as { type?: string; user?: BookaUser };
-        if (payload.type === 'LOGIN') {
-          setIsAuthenticated(true);
-          setUser(payload.user || mockUser);
-          window.userProfile = payload.user;
-          window.isAuthenticated = true;
-        } else if (payload.type === 'LOGOUT') {
-          setIsAuthenticated(false);
-          setUser(mockUser);
-          window.userProfile = null;
-          window.isAuthenticated = false;
-        }
+    const syncAuthState = (data: any) => {
+      if (data?.type === 'LOGIN') {
+        setIsAuthenticated(true);
+        setUser(data.user || mockUser);
+        window.userProfile = data.user;
+        window.isAuthenticated = true;
+      } else if (data?.type === 'LOGOUT') {
+        setIsAuthenticated(false);
+        setUser(mockUser);
+        window.userProfile = null;
+        window.isAuthenticated = false;
       }
     };
 
-    broadcast.onmessage = (event: MessageEvent) => syncAuthState(event.data);
+    broadcast.onmessage = (event) => syncAuthState(event.data);
 
-    const originalLoginForBroadcast = window.login;
-    window.login = () => {
-      originalLoginForBroadcast?.();
+    const originalLogin = win.login;
+    win.login = () => {
+      originalLogin?.();
       const usersStore = JSON.parse(localStorage.getItem('booka_users') || '{}');
       const deviceId = localStorage.getItem('booka_device_id');
 
-      const userSession = deviceId ? (usersStore as any)?.sessions?.[deviceId] : null;
+      const userSession = deviceId ? usersStore?.sessions?.[deviceId] : null;
       broadcast.postMessage({ type: 'LOGIN', user: userSession });
     };
 
-    const originalLogoutForBroadcast = window.logout;
-    window.logout = () => {
-      originalLogoutForBroadcast?.();
+    const originalLogout = win.logout;
+    win.logout = () => {
+      originalLogout?.();
       broadcast.postMessage({ type: 'LOGOUT' });
     };
 
@@ -231,12 +207,12 @@ const Header = () => {
           const usersStore = JSON.parse(event.newValue || '{}');
           const deviceId = localStorage.getItem('booka_device_id');
 
-          const userSession = deviceId ? (usersStore as any)?.sessions?.[deviceId] : null;
+          const userSession = deviceId ? usersStore?.sessions?.[deviceId] : null;
 
           if (userSession && userSession.loggedIn) {
             setIsAuthenticated(true);
             setUser(userSession);
-            window.userProfile = userSession as BookaUser;
+            window.userProfile = userSession;
             window.isAuthenticated = true;
           } else {
             setIsAuthenticated(false);
@@ -268,8 +244,8 @@ const Header = () => {
           setIsMenuOpen(false);
           setTimeout(() => setIsMenuOpen(true), 50);
         } else {
-          const globalUser = window.userProfile || mockUser;
-          setUser(globalUser as BookaUser);
+          const globalUser = (window as any).userProfile || mockUser;
+          setUser(globalUser);
           setIsAuthenticated(!!globalUser?.loggedIn);
         }
       } catch (err) {
@@ -291,13 +267,13 @@ const Header = () => {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    // expose toggleMenu typed
-    window.toggleMenu = (e?: Event | MouseEvent) => {
-      // stopPropagation exists on Event
+    const win = window as any;
+
+    win.toggleMenu = (e?: any) => {
       e?.stopPropagation?.();
       setIsMenuOpen((prev) => !prev);
     };
-    window.closeMenu = () => setIsMenuOpen(false);
+    win.closeMenu = () => setIsMenuOpen(false);
 
     return () => {
       try {
@@ -365,12 +341,12 @@ const Header = () => {
       const usersStore = JSON.parse(localStorage.getItem('booka_users') || '{}');
       const deviceId = localStorage.getItem('booka_device_id');
 
-      const userSession = deviceId ? (usersStore as any)?.sessions?.[deviceId] : null;
+      const userSession = deviceId ? usersStore?.sessions?.[deviceId] : null;
 
       if (userSession && userSession.loggedIn) {
         setIsAuthenticated(true);
         setUser(userSession);
-        window.userProfile = userSession as BookaUser;
+        window.userProfile = userSession;
         window.isAuthenticated = true;
       } else {
         setIsAuthenticated(false);
@@ -390,7 +366,7 @@ const Header = () => {
       if (detail && detail.loggedIn) {
         setUser(detail);
         setIsAuthenticated(true);
-        window.userProfile = detail as BookaUser;
+        window.userProfile = detail;
         window.isAuthenticated = true;
       } else {
         setUser(mockUser);
