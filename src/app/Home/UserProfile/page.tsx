@@ -3,14 +3,8 @@
 import Image from "next/image";
 import { mockUser } from "@/app/UI/mockUser";
 
-type PageProps = {
-  params: {
-    slug: string;
-  };
-};
-
-export default async function ProfilePage({ params }: PageProps) {
-  const { slug } = params;
+export default function ProfilePage(props: { params?: Record<string, any> } | undefined) {
+  // Si no usas props, puedes ignorarlos. Se aceptan para evitar errores de tipo en build.
   return (
     <div className="min-h-[calc(100vh-80px)] bg-[var(--light-gray)] py-10 px-4">
       <div className="max-w-2xl mx-auto">
