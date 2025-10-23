@@ -150,7 +150,7 @@ function renderUI() {
           resolve(canvas.toDataURL('image/jpeg', 0.9));
         };
         img.onerror = err => reject(err);
-        // @ts-ignore-error
+        // @ts-expect-error
         img.src = e.target.result;
       };
       reader.onerror = err => reject(err);
