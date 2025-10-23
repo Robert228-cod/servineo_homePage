@@ -2,18 +2,37 @@
 import React from 'react';
 import { mockUser } from '@/app/Home/UserProfile/UI/mockUser'; // asegúrate de tener este archivo
 
+// Add small global typings to avoid implicit any on window.userProfile/deviceId
+declare global {
+  interface BookaUser {
+    loggedIn?: boolean;
+    name?: string;
+    photo?: string;
+    email?: string;
+    phone?: string;
+    //[key: string]: unknown;
+  }
+
+  interface Window {
+    deviceId?: string;
+    userProfile?: BookaUser | null;
+    isAuthenticated?: boolean;
+  }
+}
+
 interface RegistroProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
 const Registro: React.FC<RegistroProps> = ({ isOpen, onClose }) => {
-  const [user, setUser] = React.useState(mockUser);
+  // typed state to BookaUser instead of implicit any
+  const [user, setUser] = React.useState<BookaUser>(mockUser);
 
   React.useEffect(() => {
     if (typeof window !== 'undefined') {
       // Si existe un usuario en memoria, úsalo; si no, usa el mock
-      const profile = window.userProfile || mockUser;
+      const profile = (window.userProfile ?? mockUser) as BookaUser;
       setUser(profile);
     }
   }, []);
@@ -22,9 +41,9 @@ const Registro: React.FC<RegistroProps> = ({ isOpen, onClose }) => {
 
   const handleContinuar = () => {
     // Guardar sesión simulada
-    const u = { ...user, loggedIn: true };
+    const u: BookaUser = { ...user, loggedIn: true };
 
-    const deviceId = (window as any).deviceId || 'dev-default';
+    const deviceId = window.deviceId || 'dev-default';
     const usersStore = JSON.parse(localStorage.getItem('booka_users') || '{}') || {
       sessions: {},
       lastUpdated: Date.now(),
@@ -69,7 +88,7 @@ const Registro: React.FC<RegistroProps> = ({ isOpen, onClose }) => {
         {/* Campo correo (rellenado y bloqueado) */}
         <input
           type="email"
-          value={user.email}
+          value={user.email as string}
           readOnly
           className="w-full border border-gray-300 rounded-lg px-4 py-2 mb-4 bg-gray-100 text-gray-600 cursor-not-allowed text-sm md:text-base"
         />
