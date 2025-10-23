@@ -1,6 +1,5 @@
 "use client";
-import { JSX } from "react";
-import { useEffect } from "react";
+import { JSX, useEffect, MouseEvent } from "react";
 import "@/app/Home/UserProfile/userProfile.css";
 import Header from "@/app/Home/Header/header";
 import { initUserProfileLogic } from "./userProfileLogic";
@@ -13,7 +12,7 @@ declare global {
     savePasswordChange?: () => void;
     cancelPasswordChange?: () => void;
     togglePasswordChange?: () => void;
-    togglePasswordVisibility?: (id: string, target?: any) => void;
+    togglePasswordVisibility?: (inputId: string, btn?: HTMLElement | null | undefined) => void;
     closeEdit?: () => void;
     closeProfileModal?: () => void;
   }
@@ -41,8 +40,8 @@ export default function UserProfile(): JSX.Element {
 
         setTimeout(() => {
           const params = new URLSearchParams(window.location.search);
-          if (params.get("edit") === "1" && typeof (window as any).openEdit === "function") {
-            (window as any).openEdit();
+          if (params.get("edit") === "1" && typeof window.openEdit === "function") {
+            window.openEdit();
             const url = new URL(window.location.href);
             url.searchParams.delete("edit");
             window.history.replaceState({}, "", url.toString());
@@ -73,7 +72,7 @@ export default function UserProfile(): JSX.Element {
           <label>Contraseña</label>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <span id="maskedPassword">••••••••</span>
-            <button type="button" className="btn" style={{ padding: "6px 10px", fontSize: "13px" }} onClick={() => (window as any).togglePasswordChange?.()}>Cambiar contraseña</button>
+            <button type="button" className="btn" style={{ padding: "6px 10px", fontSize: "13px" }} onClick={() => window.togglePasswordChange?.()}>Cambiar contraseña</button>
           </div>
         </div>
         <label className="toggle" style={{ marginTop: "8px" }}>
@@ -83,27 +82,27 @@ export default function UserProfile(): JSX.Element {
           <label htmlFor="currentPassword">Contraseña actual</label>
           <div style={{ position: "relative" }}>
             <input type="password" id="currentPassword" style={{ width: "100%", paddingRight: "35px" }} />
-            <button type="button" className="togglePw" style={{ position: "absolute", right: "8px", top: "50%", transform: "translateY(-50%)", border: "none", background: "none", cursor: "pointer" }} onClick={(e) => (window as any).togglePasswordVisibility?.("currentPassword", e.target)}>
+            <button type="button" className="togglePw" style={{ position: "absolute", right: "8px", top: "50%", transform: "translateY(-50%)", border: "none", background: "none", cursor: "pointer" }} onClick={(e: MouseEvent<HTMLButtonElement>) => window.togglePasswordVisibility?.("currentPassword", e.currentTarget as HTMLElement)}>
               👁
             </button>
           </div>
           <label htmlFor="newPassword">Nueva contraseña</label>
           <div style={{ position: "relative" }}>
             <input type="password" id="newPassword" style={{ width: "100%", paddingRight: "35px" }} />
-            <button type="button" className="togglePw" style={{ position: "absolute", right: "8px", top: "50%", transform: "translateY(-50%)", border: "none", background: "none", cursor: "pointer" }} onClick={(e) => (window as any).togglePasswordVisibility?.("newPassword", e.target)}>
+            <button type="button" className="togglePw" style={{ position: "absolute", right: "8px", top: "50%", transform: "translateY(-50%)", border: "none", background: "none", cursor: "pointer" }} onClick={(e: MouseEvent<HTMLButtonElement>) => window.togglePasswordVisibility?.("newPassword", e.currentTarget as HTMLElement)}>
               👁
             </button>
           </div>
           <div id="pwBar" className="password-strength"><i></i></div>
           <small id="pwErr" className="error" style={{ display: "none" }}></small>
           <div style={{ display: "flex", gap: "8px", marginTop: "10px" }}>
-            <button type="button" className="btn" onClick={() => (window as any).savePasswordChange?.()}>Guardar nueva contraseña</button>
-            <button type="button" className="btn" style={{ background: "#ccc", color: "#000" }} onClick={() => (window as any).cancelPasswordChange?.()}>Cancelar</button>
+            <button type="button" className="btn" onClick={() => window.savePasswordChange?.()}>Guardar nueva contraseña</button>
+            <button type="button" className="btn" style={{ background: "#ccc", color: "#000" }} onClick={() => window.cancelPasswordChange?.()}>Cancelar</button>
           </div>
         </div>
         <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "15px" }}>
-          <button type="button" className="btn" onClick={() => (window as any).saveProfile?.()}>Guardar</button>
-          <button type="button" className="btn" style={{ background: "#ccc", color: "#000" }} onClick={() => (window as any).closeEdit?.()}>Cancelar</button>
+          <button type="button" className="btn" onClick={() => window.saveProfile?.()}>Guardar</button>
+          <button type="button" className="btn" style={{ background: "#ccc", color: "#000" }} onClick={() => window.closeEdit?.()}>Cancelar</button>
         </div>
       </div>
       <div id="profileModal" className="modal" aria-hidden="true">
@@ -112,7 +111,7 @@ export default function UserProfile(): JSX.Element {
         <p><strong>Nombre:</strong> <span id="profileViewName"></span></p>
         <p><strong>Correo:</strong> <span id="profileViewEmail"></span></p>
         <p><strong>Teléfono:</strong> <span id="profileViewPhone"></span></p>
-        <button className="btn" onClick={() => (window as any).closeProfileModal?.()}>Cerrar</button>
+        <button className="btn" onClick={() => window.closeProfileModal?.()}>Cerrar</button>
       </div>
     </main>
   );
